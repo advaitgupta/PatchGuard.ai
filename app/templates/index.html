@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Risk-Aware Upgrade Orchestrator | Harborview Financial</title>
+  <meta name="description" content="AI-powered enterprise software upgrade prioritization platform" />
+  <link rel="stylesheet" href="/static/styles.css" />
+  <script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ═══ Top Bar ═══ -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo">⟡</div>
+      <div>
+        <div class="topbar-title">Risk-Aware Upgrade Orchestrator</div>
+        <div class="topbar-subtitle">Harborview Financial Services</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <span id="feed-status"></span>
+      <div class="topbar-badge"><span class="dot"></span> Live</div>
+      <a class="btn btn-sm" href="/docs" target="_blank">API Docs</a>
+      <button class="btn btn-sm btn-primary" id="btn-rerun" onclick="rerunAnalysis()">⟳ Re-run Analysis</button>
+      <button class="btn btn-sm" id="btn-reset" style="background:#ef4444;color:white;border:none" onclick="resetDemo()">Reset Demo</button>
+    </div>
+  </header>
+
+  <!-- ═══ Tabs ═══ -->
+  <nav class="nav-tabs">
+    <button class="nav-tab active" data-tab="tab-overview">
+      Overview
+    </button>
+    <button class="nav-tab" data-tab="tab-plan">
+      Upgrade Plan <span class="tab-count">{{ plan|length }}</span>
+    </button>
+    <button class="nav-tab" data-tab="tab-services">
+      Services <span class="tab-count">{{ services|length }}</span>
+    </button>
+    <button class="nav-tab" data-tab="tab-graph">
+      Dependency Graph
+    </button>
+    <button class="nav-tab" data-tab="tab-agents">
+      Agent Pipeline
+    </button>
+    <button class="nav-tab" data-tab="tab-reports">
+      Reports &amp; Export
+    </button>
+    <button class="nav-tab" data-tab="tab-execution">
+      Autonomous Execution
+    </button>
+    {% if ai_enabled %}
+    <button class="nav-tab" data-tab="tab-ai">
+      AI Assistant
+    </button>
+    {% endif %}
+  </nav>
+
+  <!-- ═══ Main Content ═══ -->
+  <main class="main-content">
+
+    <!-- ─── OVERVIEW TAB ─── -->
+    <div id="tab-overview" class="tab-panel active">
+
+      <!-- Executive Summary -->
+      {% if executive_summary %}
+      <div class="exec-summary">
+        <h3>Executive Risk Summary</h3>
+        <p><strong>{{ executive_summary.headline }}</strong></p>
+        <p>{{ executive_summary.top_priority }}</p>
+        <p>{{ executive_summary.risk_posture }}</p>
+        <p style="color:var(--accent-light)">{{ executive_summary.recommendation }}</p>
+      </div>
+      {% endif %}
+
+      <!-- KPI Metrics -->
+      <div class="metrics-row">
+        <div class="metric-card info">
+          <div class="metric-label">Services Monitored</div>
+          <div class="metric-value">{{ summary.service_count }}</div>
+          <div class="metric-detail">{{ summary.tier1_services }} Tier-1 critical</div>
+        </div>
+        <div class="metric-card warning">
+          <div class="metric-label">Vulnerabilities</div>
+          <div class="metric-value">{{ summary.vuln_count }}</div>
+          <div class="metric-detail">{{ summary.kev_count }} active KEVs</div>
+        </div>
+        <div class="metric-card critical">
+          <div class="metric-label">Action Required</div>
+          <div class="metric-value">{{ summary.critical_count + summary.high_count }}</div>
+          <div class="metric-detail">{{ summary.critical_count }} critical findings</div>
+        </div>
+        <div class="metric-card {% if summary.cost_of_delay_daily > 50000 %}critical{% else %}warning{% endif %}">
+          <div class="metric-label">Daily Cost of Delay</div>
+          <div class="metric-value">${{ "{:,.0f}".format(summary.cost_of_delay_daily) }}</div>
+          <div class="metric-detail">Revenue/regulatory risk per day</div>
+        </div>
+      </div>
+
+      <!-- Risk Trend Widget -->
+      {% if trend and trend.deltas is defined %}
+      <div class="card" style="margin-top:24px;border-color:rgba(234,88,12,0.2)">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Posture Trend Analysis</span>
+          <span class="badge" style="background:var(--medium-bg);color:var(--medium)">Past {{ trend.total_runs }} runs</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:15px;margin-top:10px">
+          {% if trend.trend == "improving" %}
+          <div style="font-size:32px;color:#10b981">↓</div>
+          {% elif trend.trend == "degrading" %}
+          <div style="font-size:32px;color:var(--critical)">↑</div>
+          {% else %}
+          <div style="font-size:32px;color:var(--text-muted)">→</div>
+          {% endif %}
+          <div>
+            <div style="font-weight:600;font-size:15px">{{ trend.assessment }}</div>
+            <div style="font-size:13px;color:var(--text-muted);margin-top:2px">
+              Delta: {{ trend.deltas.avg_score }} avg risk | {{ trend.deltas.critical_count }} critical findings
+            </div>
+          </div>
+        </div>
+      </div>
+      {% elif trend %}
+      <div class="card" style="margin-top:24px;border-color:rgba(234,88,12,0.15)">
+        <div class="card-title">Posture Trend Analysis</div>
+        <div style="font-size:13px;color:var(--text-muted)">
+          {{ trend.message | default("Run the analysis pipeline multiple times to see risk trend data.") }}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Top Priorities -->
+      <div class="grid-2-1">
+        <div class="card">
+          <div class="card-title">Top Priority Upgrades</div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Service</th>
+                <th>CVE</th>
+                <th>Component</th>
+                <th>Risk</th>
+                <th>Level</th>
+                <th>Approval</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for item in plan[:10] %}
+              <tr data-plan-item='{{ item | tojson }}' style="cursor:pointer">
+                <td style="font-weight:700;font-family:var(--font-mono)">{{ item.priority_rank }}</td>
+                <td>{{ item.service }}</td>
+                <td style="font-family:var(--font-mono);font-size:12px">{{ item.cve_id }}</td>
+                <td>{{ item.component }}</td>
+                <td>
+                  <div class="score-bar">
+                    <div class="score-bar-track">
+                      <div class="score-bar-fill" style="width:{{ item.final_score }}%;background:{% if item.final_score >= 70 %}var(--critical){% elif item.final_score >= 50 %}var(--high){% elif item.final_score >= 30 %}var(--medium){% else %}var(--low){% endif %}"></div>
+                    </div>
+                    <span class="score-bar-value" style="color:{% if item.final_score >= 70 %}var(--critical){% elif item.final_score >= 50 %}var(--high){% elif item.final_score >= 30 %}var(--medium){% else %}var(--low){% endif %}">{{ "%.1f"|format(item.final_score) }}</span>
+                  </div>
+                </td>
+                <td><span class="badge badge-{{ item.risk_level }}">{{ item.risk_level }}</span></td>
+                <td>
+                  {% set akey = item.cve_id ~ ':' ~ item.service %}
+                  {% if approval_lookup.get(akey) %}
+                    <span class="badge badge-{{ approval_lookup[akey] }}">{{ approval_lookup[akey] }}</span>
+                  {% elif item.approval_required %}
+                    <span class="badge badge-pending">pending</span>
+                  {% else %}
+                    <span class="badge badge-approved">auto</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Ranking Comparison -->
+        <div class="card">
+          <div class="card-title">CVSS-Only vs Business-Aware</div>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">
+            How our scoring changes the priority order compared to sorting by CVSS alone.
+          </p>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>CVE</th>
+                <th>CVSS#</th>
+                <th>Ours#</th>
+                <th>Δ</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for item in plan[:12] %}
+              {% set delta = (item.cvss_only_rank or item.priority_rank) - item.priority_rank %}
+              <tr>
+                <td style="font-family:var(--font-mono);font-size:11px">{{ item.cve_id }}</td>
+                <td style="text-align:center">#{{ item.cvss_only_rank or '—' }}</td>
+                <td style="text-align:center;font-weight:700">#{{ item.priority_rank }}</td>
+                <td style="text-align:center">
+                  {% if delta > 0 %}
+                    <span class="rank-change-up">↑{{ delta }}</span>
+                  {% elif delta < 0 %}
+                    <span class="rank-change-down">↓{{ -delta }}</span>
+                  {% else %}
+                    <span class="rank-change-same">=</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── PLAN TAB ─── -->
+    <div id="tab-plan" class="tab-panel">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Ranked Upgrade Plan</div>
+          <div class="section-subtitle">Prioritized by business risk, blast radius, and maintainability.</div>
+        </div>
+      </div>
+
+      {% if batches %}
+      <div class="card" style="margin-bottom:24px; background: rgba(234,88,12,0.04); border-color: rgba(234,88,12,0.18)">
+        <div class="card-title" style="color:var(--accent-light)">Batch Optimization Recommendation</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">
+          Grouping upgrades by service and maintenance window reduces total downtime by <strong>{{ batches.downtime_reduction_pct }}%</strong>.
+          We can satisfy {{ batches.total_upgrades }} upgrades using only {{ batches.total_services }} maintenance windows, saving {{ batches.windows_saved }} window allocations.
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Maintenance Window</th>
+                <th>Upgrades Grouped</th>
+                <th>Total Risk Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for b in batches.batches %}
+              <tr>
+                <td style="font-weight:600">{{ b.service }}</td>
+                <td><span class="badge" style="background:var(--medium-bg);color:var(--medium)">{{ b.window }}</span></td>
+                <td>{{ b.item_count }} ({{ b.components | join(', ') }})</td>
+                <td>
+                  <span class="badge badge-{{ b.max_risk_level }}">{{ b.total_risk_score }}</span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Service</th>
+              <th>CVE</th>
+              <th>Component</th>
+              <th>Score</th>
+              <th>Risk</th>
+              <th>Owner</th>
+              <th>Window</th>
+              <th>Date</th>
+              <th>Approval</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for item in plan %}
+            <tr data-plan-item='{{ item | tojson }}'>
+              <td style="font-weight:800;font-family:var(--font-mono);font-size:14px">{{ item.priority_rank }}</td>
+              <td style="font-weight:600">{{ item.service }}</td>
+              <td style="font-family:var(--font-mono);font-size:12px">{{ item.cve_id }}</td>
+              <td>{{ item.component }}</td>
+              <td>
+                <div class="score-bar">
+                  <div class="score-bar-track">
+                    <div class="score-bar-fill" style="width:{{ item.final_score }}%;background:{% if item.final_score >= 70 %}var(--critical){% elif item.final_score >= 50 %}var(--high){% elif item.final_score >= 30 %}var(--medium){% else %}var(--low){% endif %}"></div>
+                  </div>
+                  <span class="score-bar-value">{{ "%.1f"|format(item.final_score) }}</span>
+                </div>
+              </td>
+              <td><span class="badge badge-{{ item.risk_level }}">{{ item.risk_level }}</span></td>
+              <td style="font-size:12px;color:var(--text-secondary)">{{ item.owner_team }}</td>
+              <td style="font-size:12px;white-space:nowrap">{{ item.recommended_window }}</td>
+              <td style="font-size:12px;font-family:var(--font-mono)">{{ item.target_date }}</td>
+              <td>
+                {% set akey = item.cve_id ~ ':' ~ item.service %}
+                {% if approval_lookup.get(akey) %}
+                  <span class="badge badge-{{ approval_lookup[akey] }}">{{ approval_lookup[akey] }}</span>
+                {% elif item.approval_required %}
+                  <span class="badge badge-pending">pending</span>
+                {% else %}
+                  <span class="badge badge-approved">auto</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── SERVICES TAB ─── -->
+    <div id="tab-services" class="tab-panel">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Service Catalog</div>
+          <div class="section-subtitle">{{ services|length }} services in Harborview enterprise inventory</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px">
+        {% for svc in services %}
+        <div class="card" style="cursor:default">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+            <div>
+              <div style="font-weight:700;font-size:15px">{{ svc.name }}</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px">{{ svc.business_function }}</div>
+            </div>
+            <span class="badge badge-{% if svc.tier == 'tier_1' %}critical{% elif svc.tier == 'tier_2' %}high{% else %}low{% endif %}">
+              {{ svc.tier | replace('_',' ') }}
+            </span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;color:var(--text-secondary)">
+            <div>👤 {{ svc.owner.team }}</div>
+            <div>🏢 {{ svc.hosting_type }}</div>
+            <div>🔧 Rollback: {{ svc.rollback_complexity }}</div>
+            <div>{% if svc.internet_facing %}🌐 Internet-facing{% else %}🔒 Internal{% endif %}</div>
+          </div>
+          <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:4px">
+            {% for comp in svc.components[:6] %}
+            <span style="font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(234,88,12,0.1);color:var(--accent-light);border:1px solid rgba(234,88,12,0.18)">{{ comp }}</span>
+            {% endfor %}
+            {% if svc.components|length > 6 %}
+            <span style="font-size:10px;padding:2px 8px;color:var(--text-muted)">+{{ svc.components|length - 6 }} more</span>
+            {% endif %}
+          </div>
+          {% if svc.regulatory_scope %}
+          <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">
+            {% for reg in svc.regulatory_scope %}
+            <span style="font-size:9px;padding:1px 6px;border-radius:3px;background:rgba(234,88,12,0.08);color:var(--accent-light);border:1px solid rgba(234,88,12,0.2)">{{ reg }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- ─── GRAPH TAB ─── -->
+    <div id="tab-graph" class="tab-panel">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Service Dependency Graph</div>
+          <div class="section-subtitle">Interactive visualization — drag, zoom, and click to explore dependencies</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <span style="font-size:12px;display:flex;align-items:center;gap:5px"><span class="risk-chip risk-chip-critical"></span>Tier 1</span>
+        <span style="font-size:12px;display:flex;align-items:center;gap:5px"><span class="risk-chip risk-chip-high"></span>Tier 2</span>
+        <span style="font-size:12px;display:flex;align-items:center;gap:5px"><span class="risk-chip risk-chip-low"></span>Tier 3</span>
+        <span style="font-size:12px;color:var(--text-muted);margin-left:12px">Solid = sync/functional  •  Dashed = notification/analytics</span>
+      </div>
+      <div id="graph-container"></div>
+    </div>
+
+    <!-- ─── AGENTS TAB ─── -->
+    <div id="tab-agents" class="tab-panel">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Multi-Agent Pipeline Trace</div>
+          <div class="section-subtitle">6 AI agents collaborated to produce the upgrade plan</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="pipeline-steps">
+          {% for step in steps %}
+          <div class="pipeline-step">
+            <div class="step-number">{{ loop.index }}</div>
+            <div class="step-content">
+              <div class="step-agent">{{ step.agent }}</div>
+              <div class="step-action">{{ step.action }}</div>
+              <div class="step-meta">{{ step.detail }} — {{ step.duration_ms }}ms • {{ step.items_processed }} items</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top:20px">
+        <div class="card">
+          <div class="card-title">Architecture Overview</div>
+          <p style="font-size:13px;color:var(--text-secondary);line-height:1.7">
+            The system uses a <strong>six-agent architecture</strong> where each agent handles a distinct phase:
+          </p>
+          <ul class="detail-list" style="margin-top:12px">
+            <li><strong>Ingestion Agent</strong> — Loads and normalizes vulnerability records from feeds</li>
+            <li><strong>Context Agent</strong> — Builds dependency graph and matches vulnerabilities to services</li>
+            <li><strong>Risk Reasoning Agent</strong> — Computes business-aware composite risk scores</li>
+            <li><strong>Planning Agent</strong> — Ranks upgrades and assigns maintenance windows</li>
+            <li><strong>Governance Agent</strong> — Enforces approval policies and compliance constraints</li>
+            <li><strong>Explanation Agent</strong> — Generates human-readable rationale for each action</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-title">Scoring Formula</div>
+          <div style="font-family:var(--font-mono);font-size:12px;background:var(--bg-surface);padding:16px;border-radius:10px;line-height:2;color:var(--text);border:1px solid var(--border)">
+            <span style="color:var(--text-muted)">final_score</span> =<br>
+            &nbsp;&nbsp;<span style="color:var(--critical)">0.30</span> × severity +<br>
+            &nbsp;&nbsp;<span style="color:var(--high)">0.25</span> × exploitability +<br>
+            &nbsp;&nbsp;<span style="color:#f59e0b">0.20</span> × business_impact +<br>
+            &nbsp;&nbsp;<span style="color:var(--info)">0.15</span> × blast_radius +<br>
+            &nbsp;&nbsp;<span style="color:#14b8a6">0.10</span> × exposure<br>
+            &nbsp;&nbsp;− <span style="color:var(--text-muted)">penalties</span>(complexity, maintenance)
+          </div>
+          <p style="font-size:12px;color:var(--text-muted);margin-top:12px">
+            All sub-scores normalized to 0-100. Penalties subtracted for rollback complexity
+            and maintenance window distance.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── AI ASSISTANT TAB ─── -->
+    {% if ai_enabled %}
+    <div id="tab-ai" class="tab-panel">
+      <div class="section-header">
+        <div>
+          <div class="section-title">AI Risk Advisor</div>
+          <div class="section-subtitle">Powered by Google Gemini — ask questions about your risk posture</div>
+        </div>
+        <div class="topbar-badge" style="border-color:rgba(234,88,12,0.3);color:var(--accent-light)">
+          <span class="dot" style="background:var(--accent-light)"></span>
+          Gemini 3.1 Pro Preview
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Chat Panel -->
+        <div class="card" style="display:flex;flex-direction:column;min-height:500px">
+          <div class="card-title">Ask About Your Risk Data</div>
+          <div id="ai-chat-messages" style="flex:1;overflow-y:auto;padding:10px;background:var(--bg-surface);border-radius:12px;margin-bottom:12px;min-height:350px;border:1px solid var(--border)">
+            <div style="display:flex;margin-bottom:10px">
+              <div style="background:rgba(234,88,12,0.08);border:1px solid rgba(234,88,12,0.15);border-radius:12px 12px 12px 2px;padding:10px 14px;max-width:80%">
+                <div style="font-size:10px;color:var(--accent-light);font-weight:600;margin-bottom:4px">GEMINI</div>
+                <div style="font-size:13px;color:var(--text-secondary);line-height:1.6">Hello! I'm your AI risk advisor. I have full context of Harborview's vulnerability analysis. Ask me anything about your services, vulnerabilities, or upgrade priorities.</div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <input id="ai-question-input" type="text" placeholder="e.g., Which tier-1 services need immediate attention?" 
+              style="flex:1;padding:12px 16px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;font-family:var(--font);outline:none"
+              onkeydown="if(event.key==='Enter') askAIQuestion()" />
+            <button class="btn btn-primary" onclick="askAIQuestion()">Ask</button>
+          </div>
+          <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">
+            <button class="btn btn-sm" onclick="document.getElementById('ai-question-input').value='Which services should we patch this week?';askAIQuestion()" style="font-size:11px;padding:4px 10px">This week's priorities?</button>
+            <button class="btn btn-sm" onclick="document.getElementById('ai-question-input').value='What is the blast radius if Payment Gateway goes down?';askAIQuestion()" style="font-size:11px;padding:4px 10px">Payment Gateway blast radius?</button>
+            <button class="btn btn-sm" onclick="document.getElementById('ai-question-input').value='Why is CVE-2026-1108 ranked higher than CVE-2026-1101 which has a higher CVSS?';askAIQuestion()" style="font-size:11px;padding:4px 10px">Why CVSS rank differs?</button>
+            <button class="btn btn-sm" onclick="document.getElementById('ai-question-input').value='Summarize the regulatory compliance risk for PCI-DSS services';askAIQuestion()" style="font-size:11px;padding:4px 10px">PCI-DSS compliance risk?</button>
+          </div>
+        </div>
+
+        <!-- AI Summary Panel -->
+        <div>
+          <div class="card">
+            <div class="card-title">AI Executive Summary</div>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Generate a natural-language executive risk briefing with Gemini AI.</p>
+            <button id="btn-ai-summary" class="btn btn-primary" onclick="generateAISummary()" style="width:100%;margin-bottom:14px">Generate AI Summary</button>
+            <div id="ai-summary-output"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">How It Works</div>
+            <ul class="detail-list">
+              <li>Gemini receives the full analysis context: all 30 findings, 12 services, dependency graph, and scores</li>
+              <li>AI explanations are generated on-demand for each recommendation (click AI Deep Analysis in any plan item)</li>
+              <li>Natural language queries are answered using the current risk analysis as context</li>
+              <li>All AI outputs are labeled and traceable — the underlying scores and rules are deterministic</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ─── REPORTS TAB ─── -->
+    <div id="tab-reports" class="tab-panel">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Reports &amp; Export</div>
+          <div class="section-subtitle">Generate and download analysis artifacts</div>
+        </div>
+      </div>
+
+      {% if executive_summary %}
+      <div class="exec-summary" style="margin-bottom:24px">
+        <h3>Executive Summary</h3>
+        <p><strong>{{ executive_summary.headline }}</strong></p>
+        <p>{{ executive_summary.top_priority }}</p>
+        <p>{{ executive_summary.risk_posture }}</p>
+        <p style="color:var(--accent-light)">{{ executive_summary.recommendation }}</p>
+      </div>
+      {% endif %}
+
+      <div class="grid-3">
+        <div class="card" style="text-align:center">
+          <div style="font-weight:700;margin-bottom:6px">Full JSON Report</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">
+            Complete analysis with scores, rationale, and plan details
+          </div>
+          <button class="btn btn-primary" onclick="exportJSON()" style="width:100%">Download JSON</button>
+        </div>
+        <div class="card" style="text-align:center">
+          <div style="font-weight:700;margin-bottom:6px">Plan CSV</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">
+            Ranked upgrade plan in spreadsheet-friendly format
+          </div>
+          <button class="btn btn-primary" onclick="exportCSV()" style="width:100%">Download CSV</button>
+        </div>
+        <div class="card" style="text-align:center">
+          <div style="font-weight:700;margin-bottom:6px">Executive Summary</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">
+            Concise text summary for leadership review
+          </div>
+          <a class="btn btn-primary" href="/api/reports/executive-summary.txt" target="_blank" style="width:100%;text-align:center">View Text</a>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:24px">
+        <div class="card-title">API Endpoints</div>
+        <table class="data-table">
+          <thead>
+            <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="badge badge-approved">GET</span></td><td style="font-family:var(--font-mono)">/api/health</td><td>Health check</td></tr>
+            <tr><td><span class="badge badge-approved">GET</span></td><td style="font-family:var(--font-mono)">/api/services</td><td>All services</td></tr>
+            <tr><td><span class="badge badge-approved">GET</span></td><td style="font-family:var(--font-mono)">/api/services/{name}</td><td>Service detail + blast radius</td></tr>
+            <tr><td><span class="badge badge-approved">GET</span></td><td style="font-family:var(--font-mono)">/api/vulnerabilities</td><td>All vulnerabilities (filter: kev_only, severity_min)</td></tr>
+            <tr><td><span class="badge badge-pending">POST</span></td><td style="font-family:var(--font-mono)">/api/vulnerabilities</td><td>Add single vulnerability</td></tr>
+            <tr><td><span class="badge badge-pending">POST</span></td><td style="font-family:var(--font-mono)">/api/vulnerabilities/ingest</td><td>Batch ingest</td></tr>
+            <tr><td><span class="badge badge-pending">POST</span></td><td style="font-family:var(--font-mono)">/api/analysis/run</td><td>Execute full pipeline</td></tr>
+            <tr><td><span class="badge badge-approved">GET</span></td><td style="font-family:var(--font-mono)">/api/analysis/latest</td><td>Latest analysis results</td></tr>
+            <tr><td><span class="badge badge-approved">GET</span></td><td style="font-family:var(--font-mono)">/api/plan</td><td>Ranked upgrade plan</td></tr>
+            <tr><td><span class="badge badge-approved">GET</span></td><td style="font-family:var(--font-mono)">/api/graph</td><td>Dependency graph (vis.js format)</td></tr>
+            <tr><td><span class="badge badge-approved">GET</span></td><td style="font-family:var(--font-mono)">/api/comparison</td><td>CVSS vs business-aware ranking</td></tr>
+            <tr><td><span class="badge badge-pending">POST</span></td><td style="font-family:var(--font-mono)">/api/approvals/{cve}/{svc}</td><td>Submit approval decision</td></tr>
+            <tr><td><span class="badge badge-approved">GET</span></td><td style="font-family:var(--font-mono)">/api/feeds/kev</td><td>Live CISA KEV feed</td></tr>
+            <tr><td><span class="badge badge-approved">GET</span></td><td style="font-family:var(--font-mono)">/api/feeds/enrich</td><td>Enrich with live KEV/EPSS</td></tr>
+            <tr><td><span class="badge badge-approved">GET</span></td><td style="font-family:var(--font-mono)">/api/reports/export.json</td><td>Full JSON export</td></tr>
+            <tr><td><span class="badge badge-approved">GET</span></td><td style="font-family:var(--font-mono)">/api/reports/export.csv</td><td>CSV plan export</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── AUTONOMOUS EXECUTION TAB ─── -->
+    <div id="tab-execution" class="tab-panel">
+
+      <div class="section-header">
+        <div>
+          <div class="section-title">Autonomous Remediation Engine</div>
+          <div class="section-subtitle">Closed-loop execution: Approve → Stage → Precheck → Canary → Verify → Complete (or Rollback)</div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-sm" onclick="resetExecutions()" style="border-color:#ef4444;color:#ef4444">Reset All</button>
+        </div>
+      </div>
+
+      <!-- Demo Controls -->
+      <div class="card" style="margin-bottom:24px; border-color:#10b981; border-width:2px;">
+        <div class="card-title" style="color:#10b981">Launch Autonomous Remediation</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+          Select a plan item and scenario. The agent will autonomously execute the full workflow: 
+          policy check → artifact staging → prechecks → canary deploy → health verification → 
+          full rollout → postchecks → completion. For failure scenarios, it will detect degradation, 
+          rollback, and escalate.
+        </p>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr auto auto; gap:12px; align-items:end;">
+          <div>
+            <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Plan Item</label>
+            <select id="exec-plan-item" style="width:100%;padding:8px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">
+              {% for item in plan %}
+              <option value="{{ item.cve_id }}|{{ item.service }}|{{ item.component }}|{{ item.patch_version }}" 
+                      {{ 'selected' if loop.first }}>
+                {{ item.cve_id }} — {{ item.component }} ({{ item.service }})
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Scenario</label>
+            <select id="exec-scenario" style="width:100%;padding:8px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">
+              <option value="success">✅ Success (Happy Path)</option>
+              <option value="failure">❌ Failure (Rollback Demo)</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">Autonomy Level</label>
+            <select id="exec-autonomy" style="width:100%;padding:8px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">
+              <option value="supervised">Level 2 – Supervised</option>
+              <option value="auto">Level 3 – Conditional Auto</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="startExecution()" id="btn-exec-start" style="height:38px;white-space:nowrap">
+            Execute
+          </button>
+          <button class="btn btn-sm" onclick="loadExecutions()" style="height:38px">↻ Refresh</button>
+        </div>
+      </div>
+
+      <!-- Execution Timeline -->
+      <div id="exec-timeline-container" style="display:none">
+        <div class="card" style="margin-bottom:24px">
+          <div class="card-title" id="exec-timeline-title">Agent Execution Timeline</div>
+          <div id="exec-status-badge" style="margin-bottom:16px"></div>
+          <div id="exec-timeline" style="position:relative;padding-left:32px"></div>
+        </div>
+
+        <!-- Health Metrics Grid -->
+        <div id="exec-health-grid" class="grid-3" style="margin-bottom:24px"></div>
+      </div>
+
+      <!-- Past Executions -->
+      <div class="card">
+        <div class="card-title">Execution History</div>
+        <div id="exec-history-list" style="font-size:13px;color:var(--text-muted)">
+          <p>No executions yet. Launch one above to see the agent in action.</p>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="card" style="margin-top:24px">
+        <div class="card-title">Agent Notifications</div>
+        <div id="exec-notifications" style="font-size:13px;color:var(--text-muted)">
+          <p>No notifications.</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ═══ Detail Panel (slide-over) ═══ -->
+<div id="detail-overlay" class="detail-overlay"></div>
+<div id="detail-panel" class="detail-panel">
+  <button id="detail-close" class="detail-close">✕</button>
+  <div id="detail-content"></div>
+</div>
+
+<!-- ═══ Toast ═══ -->
+<div id="toast" class="toast"></div>
+
+</body>
+</html>

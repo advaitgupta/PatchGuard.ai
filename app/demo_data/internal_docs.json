@@ -1,0 +1,86 @@
+[
+  {
+    "service": "Payment Gateway",
+    "type": "incident",
+    "date": "2026-02-14",
+    "title": "Payment processing outage during Q4 settlement",
+    "summary": "A failed Spring Boot actuator endpoint caused cascading timeouts across the payment pipeline. Root cause: unpatched CVE in Spring Boot 3.1.x. 47-minute outage affecting $2.3M in transactions.",
+    "severity": "P1",
+    "related_component": "spring-boot"
+  },
+  {
+    "service": "Payment Gateway",
+    "type": "change_log",
+    "date": "2026-03-01",
+    "title": "jPOS upgrade deferred from Q1 maintenance",
+    "summary": "Planned upgrade of jPOS from 2.1.7 to 2.1.9 was deferred due to incomplete regression testing on ISO-8583 message formatting. Re-scheduled to Q2 window.",
+    "related_component": "jpos"
+  },
+  {
+    "service": "Auth Service",
+    "type": "runbook",
+    "date": "2026-01-15",
+    "title": "Auth Service Upgrade Procedure",
+    "summary": "Pre-requisites: coordinate with IAM team for token rotation. Must perform rolling restart across 3 AZs. Session cache must be warmed before cutting traffic. Estimated duration: 90 minutes with 2-person team.",
+    "related_component": "passport"
+  },
+  {
+    "service": "Customer Portal",
+    "type": "incident",
+    "date": "2026-03-22",
+    "title": "XSS vulnerability discovered in customer dashboard",
+    "summary": "Penetration test revealed stored XSS via Express request parsing. Temporary WAF rule deployed. Permanent fix requires Express upgrade to 4.21.1+.",
+    "severity": "P2",
+    "related_component": "express"
+  },
+  {
+    "service": "Fraud Detection Service",
+    "type": "change_log",
+    "date": "2026-03-10",
+    "title": "TensorFlow model retraining pipeline updated",
+    "summary": "Model serving infrastructure upgraded to support TF 2.17. Next planned upgrade to 2.18 blocked by model serialization format change. Requires ML team coordination for model re-export.",
+    "related_component": "tensorflow"
+  },
+  {
+    "service": "Identity & Access Management (IAM)",
+    "type": "incident",
+    "date": "2026-01-28",
+    "title": "Keycloak session fixation near-miss",
+    "summary": "Security audit identified session fixation edge case in Keycloak 26.0.x. No exploitation detected but SOC2 auditor flagged as finding. Remediation deadline: April 30.",
+    "severity": "P2",
+    "related_component": "keycloak"
+  },
+  {
+    "service": "Core Banking System",
+    "type": "runbook",
+    "date": "2025-11-20",
+    "title": "Core Banking Maintenance Procedure",
+    "summary": "Requires 4-hour window minimum. Must coordinate with batch processing schedule — no changes during month-end (25th-3rd). COBOL runtime changes require mainframe team on-call. Last successful change window: November 2025.",
+    "related_component": "cobol-runtime"
+  },
+  {
+    "service": "Data Warehouse",
+    "type": "change_log",
+    "date": "2026-04-01",
+    "title": "Redshift JDBC driver update scheduled",
+    "summary": "Driver update from 2.1.0.28 to 2.1.0.30 completed successfully. Next planned update to 2.1.0.33 for TLS certificate validation fix pending security review.",
+    "related_component": "redshift-driver"
+  },
+  {
+    "service": "Notification Service",
+    "type": "runbook",
+    "date": "2026-02-05",
+    "title": "SendGrid SDK Upgrade Guide",
+    "summary": "Low-risk upgrade. No breaking API changes between 8.0 and 8.2. Can be deployed during normal business hours with blue-green deployment. Rollback: revert container image tag.",
+    "related_component": "sendgrid-sdk"
+  },
+  {
+    "service": "Reporting & Analytics Engine",
+    "type": "incident",
+    "date": "2026-03-15",
+    "title": "Airflow DAG execution privilege escalation",
+    "summary": "Internal security scan detected that Airflow 2.9.x allows authenticated users to execute arbitrary Python in DAG definitions. Mitigated by restricting DAG upload permissions. Permanent fix: upgrade to 2.10.1.",
+    "severity": "P2",
+    "related_component": "airflow"
+  }
+]
