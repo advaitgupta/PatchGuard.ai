@@ -100,6 +100,18 @@ We built **PatchGuard.ai** — a multi-agent AI platform that closes that gap. I
 
 The system is currently monitoring **15 enterprise services** — you can see that in the first card — and has analyzed **18 active CVEs**, with **5 confirmed on the CISA Known Exploited Vulnerabilities catalog**.
 
+The system is currently monitoring 12 enterprise services — you can see that in the first card — and has analyzed 25 active CVEs, with 4 confirmed on the CISA Known Exploited Vulnerabilities catalog.
+PatchGuard.ai pulls vulnerability intelligence in real time from three authoritative public sources: the CISA Known Exploited Vulnerabilities (KEV) catalog — a U.S. government-maintained list of CVEs confirmed actively exploited in the wild, updated continuously by the
+  Cybersecurity and Infrastructure Security Agency; the NIST National Vulnerability Database    
+  (NVD) — the canonical global registry of all published CVEs with CVSS severity scores,
+  affected product details, and patch references, operated by the U.S. Department of Commerce;  
+  and the FIRST EPSS API — a machine-learning model maintained by the Forum of Incident Response
+   and Security Teams that assigns every CVE a probability score (0–1) representing how likely
+  it is to be exploited in the next 30 days. All three feeds are fetched live over HTTPS at
+  analysis time with no intermediary — meaning every risk score, every priority ranking, and
+  every cost-of-delay figure in the dashboard reflects the actual current threat landscape, not
+  stale cached data.
+
 ### [INSTRUCTION] Point to the third KPI card — 'Action Required'
 
 "9 findings require immediate action — 4 of them rated critical. But look at this last card."
