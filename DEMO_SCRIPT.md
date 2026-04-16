@@ -98,27 +98,17 @@ We built **PatchGuard.ai** — a multi-agent AI platform that closes that gap. I
 
 "This is the live dashboard for Harborview Financial Services — our demo firm. 850 employees, 220 million in revenue, hybrid cloud infrastructure.
 
-The system is currently monitoring **15 enterprise services** — you can see that in the first card — and has analyzed **18 active CVEs**, with **5 confirmed on the CISA Known Exploited Vulnerabilities catalog**.
-
-The system is currently monitoring 12 enterprise services — you can see that in the first card — and has analyzed 25 active CVEs, with 4 confirmed on the CISA Known Exploited Vulnerabilities catalog.
-PatchGuard.ai pulls vulnerability intelligence in real time from three authoritative public sources: the CISA Known Exploited Vulnerabilities (KEV) catalog — a U.S. government-maintained list of CVEs confirmed actively exploited in the wild, updated continuously by the
-  Cybersecurity and Infrastructure Security Agency; the NIST National Vulnerability Database    
-  (NVD) — the canonical global registry of all published CVEs with CVSS severity scores,
-  affected product details, and patch references, operated by the U.S. Department of Commerce;  
-  and the FIRST EPSS API — a machine-learning model maintained by the Forum of Incident Response
-   and Security Teams that assigns every CVE a probability score (0–1) representing how likely
-  it is to be exploited in the next 30 days. All three feeds are fetched live over HTTPS at
-  analysis time with no intermediary — meaning every risk score, every priority ranking, and
-  every cost-of-delay figure in the dashboard reflects the actual current threat landscape, not
-  stale cached data.
+The system is currently monitoring **12 enterprise services** and analyzing **25 active CVEs**, including **4 confirmed in the CISA** Known Exploited Vulnerabilities catalog.
+PatchGuard.ai continuously pulls live vulnerability intelligence from three authoritative sources: the CISA KEV catalog, which tracks actively exploited CVEs in the wild; the NIST National Vulnerability Database, the global registry of CVEs with severity scores, affected systems, and patch data; and the FIRST EPSS model, which assigns each CVE a probability of exploitation within the next 30 days.
+All data is fetched in real time over secure HTTPS with no intermediary caching. This ensures every risk score, priority ranking, and cost estimate reflects the current threat landscape—not stale or outdated information.
 
 ### [INSTRUCTION] Point to the third KPI card — 'Action Required'
 
-"9 findings require immediate action — 4 of them rated critical. But look at this last card."
+"17 findings require immediate action — 5 of them rated critical. But look at this last card."
 
 ### [INSTRUCTION] Slowly hover over the 4th KPI card — 'Daily Cost of Delay'
 
-"**$482,000 per day**. That is the aggregated financial exposure across all unpatched vulnerabilities right now — revenue at risk, regulatory fines, and reputational damage — modeled using real regulatory fine schedules from PCI-DSS, SOX, GDPR, and FFIEC.
+"**$1.38M per day**. That is the aggregated financial exposure across all unpatched vulnerabilities right now — revenue at risk, regulatory fines, and reputational damage — modeled using real regulatory fine schedules from PCI-DSS, SOX, GDPR, and FFIEC.
 
 For a single Tier-1 KEV vulnerability — one that's confirmed actively exploited in the wild — our model calculates $256,000 per day of delay. At that rate, 30 days of inaction costs **7.7 million dollars**. That's well above the average breach cost — meaning it is *cheaper* to get breached than to delay patching."
 
